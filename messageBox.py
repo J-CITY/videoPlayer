@@ -2,8 +2,9 @@ import sys
 from PyQt5 import QtWidgets, QtCore, QtGui
 from PyQt5.QtCore import QDir, Qt, QUrl, QTimer, pyqtSignal, QObject, QEvent
 import strings
+
 class MessageBox(QtWidgets.QDialog):
-	def __init__(self, text="121313", parent=None):
+	def __init__(self, text="", parent=None):
 		super(MessageBox, self).__init__(parent)
 		self.text = text
 		self.setWindowFlags(QtCore.Qt.FramelessWindowHint)
@@ -22,6 +23,12 @@ class MessageBox(QtWidgets.QDialog):
 		self.text = text
 		self.timer.stop()
 		self.timer.start()
+		self.show()
+		
+	def setTextAlways(self, text):
+		self.hide()
+		self.timer.stop()
+		self.text = text
 		self.show()
 	
 	def paintEvent(self, event):

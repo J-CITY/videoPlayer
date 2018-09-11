@@ -4,7 +4,7 @@ from PyQt5.QtMultimediaWidgets import QVideoWidget
 from PyQt5.QtWidgets import (QApplication, QFileDialog, QHBoxLayout, QLabel,
 		QPushButton, QSizePolicy, QSlider, QStyle, QVBoxLayout, QWidget)
 from PyQt5.QtWidgets import (QMainWindow,QWidget, QPushButton, QAction, 
-	QFrame, QMenu, QInputDialog)
+	QFrame, QMenu, QInputDialog, QTextEdit)
 from PyQt5.QtGui import QIcon, QPalette, QColor, QFont, QPainter, QCursor, QMouseEvent, QIcon
 import sys, os
 import vlc
@@ -19,6 +19,8 @@ from delay import DelayDialog
 import strings
 import threading
 from messageBox import MessageBox
+import re
+from sub import Subtitles
 
 class Track:
 	codec = ""
@@ -38,10 +40,6 @@ class VideoPlayerWindow(QMainWindow):
 		#self.setWindowFlags(Qt.FramelessWindowHint)
 		self.setWindowTitle(strings.VIDEOPLAYER_NAME) 
 
-		if strings.CONFIG_USE_NOTIFICATION:
-			self.message = MessageBox()
-		else:
-			self.message = None
 
 		self.___onChange = True
 		
@@ -100,6 +98,15 @@ class VideoPlayerWindow(QMainWindow):
 		self.curTime = 0
 		self.currentMilliTime = lambda: int(round(time.time() * 1000))
 		
+		#second subtitles
+		self.isSecondSub = False
+		self.isTranslateSub = False
+		self.isInteractiveTranslateSub = False
+		self.secondSub = Subtitles()
+		#translate
+		######
+		
+		
 		if inList != []:
 			self.openFile(inList)
 		self.updateFlags()
@@ -128,8 +135,41 @@ class VideoPlayerWindow(QMainWindow):
 		self.positionslider.setMaximum(1000)
 		self.positionslider.valueChanged.connect(self.setPosition)
 		
+		
+		font = QFont()
+		font.setPointSize(20)
+		self.subbox = QHBoxLayout()
+		self.subLabel = QLabel()
+		self.subLabel.setText("")
+		self.subLabel.setFont(font)
+		self.subbox.addWidget(self.subLabel)
+		self.subLabel.setStyleSheet('QLabel {background-color: '+strings.BG_COLOR+'; color: '+strings.TEXT_COLOR+';}')
+		self.subLabel.setWordWrap(True)
+		self.subLabel.setAlignment(Qt.AlignCenter)
+		self.subLabel.setFixedHeight(50)
+		items = (self.subbox.itemAt(i) for i in range(self.subbox.count()))
+		for w in items:
+			if w.widget() != None:
+				w.widget().setHidden(True)
+				
+		
+		self.dsubbox = QHBoxLayout()
+		self.dsubText = QTextEdit()
+		self.dsubText.setReadOnly(True)
+		self.dsubText.setText("")
+		self.dsubText.setFont(font)
+		self.dsubbox.addWidget(self.dsubText)
+		self.dsubText.setStyleSheet('QTextEdit {background-color: '+strings.BG_COLOR+'; color: '+strings.TEXT_COLOR+';}')
+		self.dsubText.setFixedHeight(50)
+		items = (self.dsubbox.itemAt(i) for i in range(self.dsubbox.count()))
+		for w in items:
+			if w.widget() != None:
+				w.widget().setHidden(True)
+		
+		
 		self.hbuttonbox = QHBoxLayout()
 		self.playbutton = QPushButton(strings.PLAY_BTN)
+		#self.playbutton.setIcon(QIcon('icons/play.png'))
 		self.hbuttonbox.addWidget(self.playbutton)
 		self.playbutton.clicked.connect(self.playPause)
 		self.playbutton.setFixedSize(40, 40)
@@ -182,7 +222,9 @@ class VideoPlayerWindow(QMainWindow):
 		
 		self.vboxlayout = QVBoxLayout()
 		self.vboxlayout.setSpacing(0)
+		self.vboxlayout.addLayout(self.subbox)
 		self.vboxlayout.addWidget(self.videoframe)
+		self.vboxlayout.addLayout(self.dsubbox)
 		self.vboxlayout.addWidget(self.positionslider)
 		self.vboxlayout.addLayout(self.hbuttonbox)
 		
@@ -197,7 +239,14 @@ class VideoPlayerWindow(QMainWindow):
 		self.timer.timeout.connect(self.updateUI)
 		self.timer.start()
 		
+		
 		self.timerControlHide = QTimer(self)
+
+		
+		if strings.CONFIG_USE_NOTIFICATION:
+			self.message = MessageBox()
+		else:
+			self.message = None
 		
 	def getState(self):
 		while True:
@@ -215,6 +264,7 @@ class VideoPlayerWindow(QMainWindow):
 				if _id != self.playlistListId:
 					if self.playlistListId < 0:
 						self.playlistListId = 0
+					self.secondSub.id = 0
 					self.openPlayer(self.playlistList[self.playlistListId])
 				#for i in self.listPlayer:
 				#	print(i)
@@ -246,8 +296,35 @@ class VideoPlayerWindow(QMainWindow):
 		if not self.mediaplayer.is_playing():
 			if not self.isPaused:
 				self.stop()
-	
-	
+				
+		if self.isSecondSub:
+			self.subLabel.setText(self.secondSub.getCurSub(self.mediaplayer.get_time()))
+		#print(self.isTranslateSub)
+		if self.isTranslateSub:
+			sub = self.secondSub.getTranslateCurSub(self.mediaplayer.get_time())
+			if sub != None:
+				self.subLabel.setText(sub)
+		if self.isInteractiveTranslateSub:
+			selected = self.dsubText.textCursor().selectedText()
+			if selected != "" and self.message.text != selected:
+				tr = self.secondSub.translate(selected)
+				if tr != None:
+					self.message.setTextAlways(tr)
+				if not self.isPaused:
+					self.playPause()
+			if selected == "":
+				self.message.hide()
+		
+			sub = self.secondSub.getCurSub(self.mediaplayer.get_time())
+			if sub != None:
+				_text = self.dsubText.toPlainText()
+				sub = sub.replace("\n", ' ')
+				_sub = re.sub(r'<[/a-zA-Z]*>', '', sub)
+				if _text != _sub:
+					#print(_text, " | ", sub)
+					self.dsubText.setHtml("<p style=\"text-align: center\">"+sub+"</p>")
+				
+				
 	def keyPressEvent(self, e):
 		if e.key() == Qt.Key_Q and e.modifiers() == Qt.ControlModifier:
 			self.systemtray.hide()
@@ -277,14 +354,24 @@ class VideoPlayerWindow(QMainWindow):
 			self.playPause()
 		elif e.key() == Qt.Key_S:
 			self.stop()
+		elif e.key() == Qt.Key_Comma and e.modifiers() == Qt.ControlModifier:
+			self.moveLessMs()
+			self.secondSub.id = 0
+		elif e.key() == Qt.Key_Period and e.modifiers() == Qt.ControlModifier:
+			self.moveGreaterMs()
+			self.secondSub.id = 0
 		elif e.key() == Qt.Key_Comma:
 			self.moveLess()
+			self.secondSub.id = 0
 		elif e.key() == Qt.Key_Period:
 			self.moveGreater()
+			self.secondSub.id = 0
 		elif e.key() == Qt.Key_Less:
 			self.prev()
+			self.secondSub.id = 0
 		elif e.key() == Qt.Key_Greater:
 			self.next()
+			self.secondSub.id = 0
 		elif e.key() == Qt.Key_Equal:
 			self.volumeUp()
 		elif e.key() == Qt.Key_Minus:
@@ -296,11 +383,16 @@ class VideoPlayerWindow(QMainWindow):
 		self.fullscreen()
 	
 	def mousePressEvent(self, event):
-		self.offset = event.pos()
 		if event.button() == Qt.RightButton:
 			self.popUpMenu()
+			self.offset = None
+		elif event.button() == Qt.MidButton:
+			self.playPause()
+			self.offset = None
+		else:
+			self.offset = event.pos()
 	def mouseMoveEvent(self, event):
-		if event.button() != Qt.RightButton and self.offset != None and not self.isFullScreen:
+		if event.button() != Qt.RightButton and event.button() != Qt.MidButton  and self.offset != None and not self.isFullScreen:
 			
 			if event.localPos().y() * 100 / self.height() > 80:
 				return
@@ -318,8 +410,8 @@ class VideoPlayerWindow(QMainWindow):
 
 	def dropEvent(self, event):
 		files = [unicode(u.toLocalFile()) for u in event.mimeData().urls()]
-		for f in files:
-			print(f)
+		#for f in files:
+		#	print(f)
 	
 	def wheelEvent(self, event):
 		p = event.angleDelta()
@@ -414,7 +506,10 @@ class VideoPlayerWindow(QMainWindow):
 				self.subTracks.append(track)
 			
 	def updateSupTracks(self):
-		self.subTracks = []
+		maxId = 0
+		for t in self.subTracks:
+			maxId = maxId if maxId > t.id else t.id
+		#self.subTracks = []
 		if self.media == None:
 			return None
 		mediaTrack_pp = ctypes.POINTER(vlc.MediaTrack)()
@@ -425,7 +520,15 @@ class VideoPlayerWindow(QMainWindow):
 		except ValueError:
 			return None
 		tracks = ( contents[i].contents for i in range(len(contents)) )
+		
 		for t in tracks:
+			flag = False
+			for tt in self.subTracks:
+				if tt.id == t.id:
+					flag = True
+					break
+			if flag:
+				continue
 			track = Track()
 			track.id = t.id
 			track.codec = t.codec
@@ -433,8 +536,9 @@ class VideoPlayerWindow(QMainWindow):
 			track.level = t.level
 			track.language = t.language
 			track.description = t.description
-			if track.type == vlc.TrackType.text:
+			if t.type == vlc.TrackType.text:
 				self.subTracks.append(track)
+			
 
 	def playPause(self):
 		if self.mediaplayer.is_playing():
@@ -495,6 +599,7 @@ class VideoPlayerWindow(QMainWindow):
 			self.mediaplayer.set_position(position / 1000.0)
 			if self.audioTracks[self.audioTracksId].is_external:
 				self.externalTrack.set_position(position / 1000.0)
+			self.secondSub.id = 0
 				
 	def setPosition(self):
 		if self.___onChange:
@@ -502,6 +607,25 @@ class VideoPlayerWindow(QMainWindow):
 			self.mediaplayer.set_position(position / 1000.0)
 			if self.audioTracks[self.audioTracksId].is_external:
 				self.externalTrack.set_position(position / 1000.0)
+			self.secondSub.id = 0
+	
+	def moveLessMs(self):
+		_p = self.mediaplayer.get_time()
+		_p -= 1000
+		if _p < 0:
+			_p = 0
+		self.mediaplayer.set_time(_p)
+		if self.audioTracks[self.audioTracksId].is_external:
+			self.externalTrack.set_time(_p)
+		
+	def moveGreaterMs(self):
+		_p = self.mediaplayer.get_time()
+		_p += 1000
+		if _p >= self.mediaplayer.get_length():
+			_p = self.mediaplayer.get_length()-10
+		self.mediaplayer.set_time(_p)
+		if self.audioTracks[self.audioTracksId].is_external:
+			self.externalTrack.set_time(_p)
 	
 	def moveLess(self):
 		_p = self.mediaplayer.get_position() * 1000.0
@@ -573,7 +697,7 @@ class VideoPlayerWindow(QMainWindow):
 		self.mediaplayer.video_set_aspect_ratio(self.ratios[self.ratioId])
 	def setRatio(self, i):
 		self.ratioId = i
-		print(self.ratios[self.ratioId])
+		#print(self.ratios[self.ratioId])
 		self.mediaplayer.video_set_aspect_ratio(self.ratios[self.ratioId])
 	
 	def get_audio_track(self):
@@ -675,19 +799,77 @@ class VideoPlayerWindow(QMainWindow):
 	
 	def runSub(self, i):
 		self.subTracksId = i
-		print(self.subTracksId, self.subTracks)
-		for s in self.subTracks:
-			print(s.language)
 		if self.subTracksId < 0:
+			print("SUB OFF")
 			self.mediaplayer.video_set_spu(self.subTracksId)
 		elif self.subTracks[self.subTracksId].is_external:
-			v = self.mediaplayer.video_set_subtitle_file(self.subTracks[self.subTracksId].path)
+			self.mediaplayer.video_set_subtitle_file(str(self.subTracks[self.subTracksId].path))
 		else:
 			self.mediaplayer.video_set_spu(self.subTracks[self.subTracksId].id)
+			print(self.mediaplayer.video_get_spu())
+			
+	def runSub2(self, i):
+		if i < 0 or i >= len(self.subTracks):
+			return
+		if self.subTracks[i].is_external:
+			self.isSecondSub = True
+			self.isTranslateSub = False
+			items = (self.subbox.itemAt(i) for i in range(self.subbox.count()))
+			for w in items:
+				if w.widget() != None:
+					w.widget().setHidden(False)
+			self.subTracksId2 = i
+			self.secondSub.open(self.subTracks[i].path)
+		else:
+			self.offSub2()
+	
+	def translateSub(self):
+		if self.subTracksId < 0 or self.subTracksId >= len(self.subTracks):
+			return
+		if self.subTracks[self.subTracksId].is_external:
+			self.isSecondSub = False
+			self.isTranslateSub = not self.isTranslateSub
+			if self.isTranslateSub:
+				items = (self.subbox.itemAt(i) for i in range(self.subbox.count()))
+				for w in items:
+					if w.widget() != None:
+						w.widget().setHidden(False)
+				self.secondSub.open(self.subTracks[self.subTracksId].path)
+			else:
+				items = (self.subbox.itemAt(i) for i in range(self.subbox.count()))
+				for w in items:
+					if w.widget() != None:
+						w.widget().setHidden(True)
+			
+	def translateDynamicSub(self):
+		if self.subTracksId < 0 or self.subTracksId >= len(self.subTracks):
+			return
+		if self.subTracks[self.subTracksId].is_external:
+			self.mediaplayer.video_set_spu(-1)
+			self.isInteractiveTranslateSub = not self.isInteractiveTranslateSub
+			if self.isInteractiveTranslateSub:
+				items = (self.dsubbox.itemAt(i) for i in range(self.dsubbox.count()))
+				for w in items:
+					if w.widget() != None:
+						w.widget().setHidden(False)
+				self.secondSub.open(self.subTracks[self.subTracksId].path)
+			else:
+				items = (self.dsubbox.itemAt(i) for i in range(self.dsubbox.count()))
+				for w in items:
+					if w.widget() != None:
+						w.widget().setHidden(True)
 			
 	def offSub(self):
 		self.subTracksId = -1
 		self.mediaplayer.video_set_spu(self.subTracksId)
+		
+	def offSub2(self):
+		self.isSecondSub = False
+		self.isTranslateSub = False
+		items = (self.subbox.itemAt(i) for i in range(self.subbox.count()))
+		for w in items:
+			if w.widget() != None:
+				w.widget().setHidden(True)
 		
 	def runAudio(self, i):
 		_i = self.audioTracksId
@@ -716,7 +898,7 @@ class VideoPlayerWindow(QMainWindow):
 	
 	def runVideo(self, track, i):
 		self.videoTracksId = i
-		print(track, i)
+		#print(track, i)
 		if track.is_external:
 			pass
 		else:
@@ -759,15 +941,26 @@ class VideoPlayerWindow(QMainWindow):
 		self.menu.addAction(controlAct)
 		self.menu.addSeparator()
 		
-		subAction = QMenu('Subtitles', self)
+		subAction = QMenu('Subtitles 1', self)
 		
 		externalSubAct = QAction('External subtitles', self)
 		externalSubAct.triggered.connect(self.externalSub)
 		subAction.addAction(externalSubAct)
 		subAction.addSeparator()
+		
+		translateSubAct = QAction('Translate', self.menu)
+		translateSubAct.triggered.connect(self.translateSub)
+		subAction.addAction(translateSubAct)
+		subAction.addSeparator()
+		
+		translateSubAct = QAction('Dynamic Translate', self.menu)
+		translateSubAct.triggered.connect(self.translateDynamicSub)
+		subAction.addAction(translateSubAct)
+		subAction.addSeparator()
+		
 		for i, s in enumerate(self.subTracks):
+			#if not self.subTracks[i].is_external:
 			subAct = QAction(str((s.language if s.language != None else str(i)+" - track")), self)
-			print("SUB", i)
 			subAct.triggered.connect(lambda  state, _i = i: self.runSub(_i))
 			subAction.addAction(subAct)
 		offSubAct = QAction("off", self)
@@ -779,7 +972,23 @@ class VideoPlayerWindow(QMainWindow):
 		delay = self.mediaplayer.video_get_spu_delay()
 		delaySubAct.triggered.connect(lambda state, d=delay: self.delayDialog(d, "AUDIO"))
 		subAction.addAction(delaySubAct)
+		##################
+		subAction2 = QMenu('Subtitles 2', self)
+		for i, s in enumerate(self.subTracks):
+			if self.subTracks[i].is_external:
+				subAct = QAction(str((s.language if s.language != None else str(i)+" - track")), self)
+				subAct.triggered.connect(lambda  state, _i = i: self.runSub2(_i))
+				subAction2.addAction(subAct)
+		offSubAct2 = QAction("off", self)
+		offSubAct2.triggered.connect(self.offSub2)
+		subAction2.addAction(offSubAct2)
 		
+		#subAction.addSeparator()
+		#delaySubAct = QAction("delay", self)
+		#delay = self.mediaplayer.video_get_spu_delay()
+		#delaySubAct.triggered.connect(lambda state, d=delay: self.delayDialog(d, "AUDIO"))
+		#subAction.addAction(delaySubAct)
+		######################
 		audioAction = QMenu('Audio', self)
 		externalAudioAct = QAction('External audio', self)
 		externalAudioAct.triggered.connect(self.externalAudio)
@@ -874,6 +1083,7 @@ class VideoPlayerWindow(QMainWindow):
 		closeAct.triggered.connect(lambda: (self.systemtray.hide(), self.close()))
 		
 		self.menu.addMenu(subAction)
+		self.menu.addMenu(subAction2)
 		self.menu.addMenu(audioAction)
 		self.menu.addMenu(videoAction)
 		self.menu.addMenu(sourceAction)
@@ -881,6 +1091,7 @@ class VideoPlayerWindow(QMainWindow):
 		self.menu.addSeparator()
 		self.menu.addAction(closeAct)
 		return self.menu
+	
 	
 	def delayDialog(self, delay, type):
 		dialog = DelayDialog(self.presenter, delay, type)
@@ -903,15 +1114,14 @@ class VideoPlayerWindow(QMainWindow):
 			return
 		newT = Track()
 		newT.codec = ""
-		newT.id = -10
+		newT.id = 100+len(self.subTracks)
 		newT.type = vlc.TrackType.text
 		newT.level = None
 		newT.language = None
 		newT.description = "Externel sub"
 		newT.is_external = True
 		newT.path = fname
-
-		self.audoiT.append(newT)
+		self.subTracks.append(newT)
 		self.updateSupTracks()
 		
 	def externalAudio(self):
@@ -959,7 +1169,6 @@ class VideoPlayerWindow(QMainWindow):
 		path = os.path.dirname(os.path.abspath(__file__))
 		filter = "Video (*.avi *.wmv *.mov *.mkv *3gp)"
 		fnames = QFileDialog.getOpenFileNames(self, 'Open files', path, filter)
-		print("!!!!!!",fnames)
 		if fnames == []:
 			return
 		self.playlistList = []
@@ -973,7 +1182,6 @@ class VideoPlayerWindow(QMainWindow):
 			url = str(text)
 			if "youtu" in url:
 				url = YouTube(url).streams.first().url
-				print(url)
 			self.playlistList = []
 			self.openFile([url])
 	
