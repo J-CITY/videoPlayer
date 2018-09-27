@@ -1,13 +1,14 @@
 import pysrt
-from googletrans import Translator
+#from googletrans import Translator
 import strings
-
+import goslate
 class Subtitles:
 	def __init__(self, file=None):
 		self.subs = None
 		self.open(file)
 		self.id = 0
-		self.translator = Translator()
+		#self.translator = Translator()
+		self.translator = goslate.Goslate()
 		self.oldText = ""
 		
 	def open(self, file):
@@ -41,9 +42,13 @@ class Subtitles:
 		if text == self.oldText:
 			return None
 		self.oldText = text
-		tr = self.translator.translate(text, 
-			src=strings.TRANSLATE_SRC, 
-			dest=strings.TRANSLATE_DEST).text
+		try:
+			tr = self.translator.translate(text, strings.TRANSLATE_DEST)
+		except:
+			return ""
+			#.translate(text, 
+			#src=strings.TRANSLATE_SRC, 
+			#dest=strings.TRANSLATE_DEST).text
 		return tr
 		
 	def toMs(self, time):
@@ -57,9 +62,13 @@ class Subtitles:
 		if text == self.oldText:
 			return None
 		self.oldText = text
-		tr = self.translator.translate(text, 
-			src=strings.TRANSLATE_SRC, 
-			dest=strings.TRANSLATE_DEST).text
+		try:
+			tr = self.translator.translate(text, strings.TRANSLATE_DEST)
+		except:
+			return ""
+		#tr = self.translator.translate(text, 
+		#	src=strings.TRANSLATE_SRC, 
+		#	dest=strings.TRANSLATE_DEST).text
 		return tr
 		
 		

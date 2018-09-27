@@ -1,0 +1,1 @@
+pyinstaller -w -i "C:\Users\333da\Desktop\videoPlayer\icons\icon.ico" -F main.py
