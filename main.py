@@ -1180,10 +1180,15 @@ class VideoPlayerWindow(QMainWindow):
 			'Enter URL:')
 		if ok and str(text) != "":
 			url = str(text)
-			if "youtu" in url:
-				url = YouTube(url).streams.first().url
-			self.playlistList = []
-			self.openFile([url])
+			#if "youtu" in url:
+			try:
+				_url = YouTube(url).streams.first().url
+				print(_url)
+				self.playlistList = []
+				self.openFile([_url])
+			except:
+				return
+			
 	
 	def setPresenter(self, p):
 		self.presenter = p
