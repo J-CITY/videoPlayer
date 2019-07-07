@@ -1,4 +1,7 @@
 
+import subprocess
+import asyncio
+
 class Presenter:
 	def __init__(self):
 		self.player = None
@@ -30,8 +33,16 @@ class Presenter:
 	def setPlaylist(self, pl):
 		self.player.setPlaylist(pl)
 		
+	def openFile(self, file):
+		self.player.playlistList = []
+		self.player.openFile([file])
+		
 	def playById(self, id):
 		self.player.playById(id)
 		
 	def setDelay(self, delay, type):
 		self.player.setDelay(delay, type)
+		
+	def torrentGo(self, id, magnetLink, torrentPath):
+		asyncio.ProactorEventLoop().run_until_complete(self.player.playTorrentSubprocess(id, magnetLink, torrentPath))
+	

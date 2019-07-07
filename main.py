@@ -15,12 +15,18 @@ from pytube import YouTube
 from widget import QJumpSlider, HorizontalTabWidget, CustomSystemTrayIcon, Frame
 from equalizer import EqualizerDialog
 from playlist import PlaylistDialog
+from torrentDialog import TorrentDialog
 from delay import DelayDialog
 import strings
 import threading
 from messageBox import MessageBox
 import re
 from sub import Subtitles
+
+import subprocess
+import asyncio
+import os.path
+
 
 class Track:
 	codec = ""
@@ -39,7 +45,8 @@ class VideoPlayerWindow(QMainWindow):
 		super(VideoPlayerWindow, self).__init__(parent)
 		#self.setWindowFlags(Qt.FramelessWindowHint)
 		self.setWindowTitle(strings.VIDEOPLAYER_NAME) 
-
+		
+		self.torrentProc = None
 
 		self.___onChange = True
 		
@@ -726,6 +733,66 @@ class VideoPlayerWindow(QMainWindow):
 		self.playlistListId = 0
 		self.openPlayer(filenames[0])
 
+	async def playTorrentSubprocess(self, id, magnetLink, torrentPath):
+		if not self.torrentProc is None:
+			self.torrentProc.stdout.close()
+			self.torrentProc.kill()
+			self.torrentProc = None
+		
+		_torrentPath = magnetLink if torrentPath == '' else torrentPath
+		if _torrentPath == '':
+			return
+		print('cmd: ', 'peerflix "'+_torrentPath+'" -i ' + str(id))
+		self.torrentProc = await asyncio.create_subprocess_shell(
+			'peerflix "'+_torrentPath+'" -i ' + str(id),
+			stdout=asyncio.subprocess.PIPE,
+			stderr=asyncio.subprocess.PIPE, shell=True)
+	
+		fileName = ''
+		rootPath = ''
+		#b=False
+		while self.torrentProc.returncode is None:
+			data = await self.torrentProc.stdout.readline()
+			#if not data:
+			line = data.decode('utf-8').strip()
+			print(data)
+			ostrs = line.split('\n')
+
+			for ostr in ostrs:
+				#print(ostr, ostr.find('info streaming '))
+				if ostr.find('info streaming ') != -1:
+					fileName = ostr[15:]
+					print(fileName)
+				if ostr.find('info path ') != -1:
+					rootPath = ostr[10:]
+					print(rootPath)
+			if fileName != '' and rootPath != '':#and not b:
+				time.sleep(5)
+				#b=True
+				self.getListOfFiles(rootPath, fileName)
+				break
+			asyncio.sleep(.99)
+		
+		subprocess.Popen('peerflix "'+_torrentPath+'" -i ' + str(id), close_fds=True, shell=True)
+		
+		#os.spawnl(os.P_DETACH, 'peerflix "'+_torrentPath+'" -i ' + str(id),"DUMMY")
+		#time.sleep(5) 
+		#self.getListOfFiles(rootPath, fileName)
+		#self.close()
+	
+	def getListOfFiles(self, dirName, fileName):
+		listOfFile = os.listdir(dirName)
+		for entry in listOfFile:
+			fullPath = os.path.join(dirName, entry)
+			if os.path.isdir(fullPath):
+				self.getListOfFiles(fullPath, fileName)
+			else:
+				if entry == fileName:
+					print("OPEN FILE: ", fullPath)
+					self.playlistList = []
+					self.openFile([fullPath])
+					return
+	
 	def openPlayer(self, fname):
 		self.media = self.instance.media_new(fname)
 		
@@ -1077,6 +1144,9 @@ class VideoPlayerWindow(QMainWindow):
 		
 		playlistAct = QAction('Playlist', self)
 		playlistAct.triggered.connect(self.dialogPlaylist)
+
+		torrentAct = QAction('Torrent', self)
+		torrentAct.triggered.connect(self.dialogTorrent)
 		
 		
 		closeAct = QAction('Close', self)
@@ -1088,6 +1158,7 @@ class VideoPlayerWindow(QMainWindow):
 		self.menu.addMenu(videoAction)
 		self.menu.addMenu(sourceAction)
 		self.menu.addAction(playlistAct)
+		self.menu.addAction(torrentAct)
 		self.menu.addSeparator()
 		self.menu.addAction(closeAct)
 		return self.menu
@@ -1154,10 +1225,13 @@ class VideoPlayerWindow(QMainWindow):
 		
 	def dialogPlaylist(self):
 		self.playlistDialog = PlaylistDialog(self.presenter, self.playlistList)
-		
+	
+	def dialogTorrent(self):
+		self.torrentDialog = TorrentDialog(self.presenter)
+
 	def openFileAct(self):
 		path = os.path.dirname(os.path.abspath(__file__))
-		filter = "Video (*.avi *.wmv *.mov *.mkv *3gp)"
+		filter = "Video (*.avi *.wmv *.mov *.mkv *.3gp *.m4v *.mp4)"
 		fname = QFileDialog.getOpenFileName(self, 'Open file', path, filter)[0]
 		if fname == "":
 			return
@@ -1186,10 +1260,18 @@ class VideoPlayerWindow(QMainWindow):
 				print(_url)
 				self.playlistList = []
 				self.openFile([_url])
-			except:
 				return
+			except:
+				print("Not YT")
 			
-	
+			try:
+				if (url.find('http') != -1):
+					self.playlistList = []
+					self.openFile([url])
+				return
+			except:
+				print("Not http link")
+			return
 	def setPresenter(self, p):
 		self.presenter = p
 	
