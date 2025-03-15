@@ -6,6 +6,7 @@ pytube
 pysrt
 goslate
 bencodepy
+qt-material
 
 Build exe
 

@@ -4,8 +4,9 @@ try:
 	import pysrt
 	import goslate
 	import bencodepy
+	from qt_material import apply_stylesheet
 except:
-	print("Some important lids are not installed (pyqt5/pytube/pysrt/goslate/bencodepy)")
+	print("Some important lids are not installed (pyqt5/pytube/pysrt/goslate/bencodepy/qt_material)")
 	exit(1)
 
 from PyQt5.QtCore import Qt, QTimer, QEvent
@@ -184,39 +185,35 @@ class VideoPlayerWindow(QMainWindow):
 		self.hbuttonbox.addWidget(self.playbutton)
 		self.playbutton.clicked.connect(self.playPause)
 		self.playbutton.setFixedSize(40, 40)
-		self.playbutton.setStyleSheet('QPushButton {background-color: '+strings.BG_COLOR+'; color: '+strings.TEXT_COLOR+'; border: 1px;} \
-			QPushButton:pressed { background-color: '+strings.BG_COLOR_PRESSED+' }')
+		self.playbutton.setStyleSheet('QPushButton { border: 0px;}')
 		
 		self.stopbutton = QPushButton(strings.STOP_BTN)
 		self.hbuttonbox.addWidget(self.stopbutton)
 		self.stopbutton.clicked.connect(self.stop)
 		self.stopbutton.setFixedSize(40, 40)
-		self.stopbutton.setStyleSheet('QPushButton {background-color: '+strings.BG_COLOR+'; color: '+strings.TEXT_COLOR+'; border: 1px;}' \
-			'QPushButton:pressed { background-color: '+strings.BG_COLOR_PRESSED+' }')
+		self.stopbutton.setStyleSheet('QPushButton { border: 0px;}')
 		
 		self.prevbutton = QPushButton(strings.PREV_BTN)
 		self.hbuttonbox.addWidget(self.prevbutton)
 		self.prevbutton.clicked.connect(self.prev)
 		self.prevbutton.setFixedSize(40, 40)
-		self.prevbutton.setStyleSheet('QPushButton {background-color: '+strings.BG_COLOR+'; color: '+strings.TEXT_COLOR+'; border: 1px;}' \
-			'QPushButton:pressed { background-color: '+strings.BG_COLOR_PRESSED+' }')
+		self.prevbutton.setStyleSheet('QPushButton { border: 0px;}')
 		
 		self.nextbutton = QPushButton(strings.NEXT_BTN)
 		self.hbuttonbox.addWidget(self.nextbutton)
 		self.nextbutton.clicked.connect(self.next)
 		self.nextbutton.setFixedSize(40, 40)
-		self.nextbutton.setStyleSheet('QPushButton {background-color: '+strings.BG_COLOR+'; color: '+strings.TEXT_COLOR+'; border: 1px;}' \
-			'QPushButton:pressed { background-color: '+strings.BG_COLOR_PRESSED+' }')
+		self.nextbutton.setStyleSheet('QPushButton { border: 0px;}')
 		
 		self.timeLabel = QLabel()
 		self.timeLabel.setText("00:00:00")
 		self.hbuttonbox.addWidget(self.timeLabel)
-		self.timeLabel.setStyleSheet('QLabel {background-color: '+strings.BG_COLOR+'; color: '+strings.TEXT_COLOR+';}')
+		#self.timeLabel.setStyleSheet('QLabel {background-color: '+strings.BG_COLOR+'; color: '+strings.TEXT_COLOR+';}')
 		
 		self.lengthLabel = QLabel()
 		self.lengthLabel.setText("/ 00:00:00")
 		self.hbuttonbox.addWidget(self.lengthLabel)
-		self.lengthLabel.setStyleSheet('QLabel {background-color: '+strings.BG_COLOR+'; color: '+strings.TEXT_COLOR+';}')
+		#self.lengthLabel.setStyleSheet('QLabel {background-color: '+strings.BG_COLOR+'; color: '+strings.TEXT_COLOR+';}')
 		
 		self.hbuttonbox.addStretch(1)
 		self.volumeslider = QJumpSlider(Qt.Horizontal, self)
@@ -227,7 +224,7 @@ class VideoPlayerWindow(QMainWindow):
 		
 		self.volumesliderlabel = QLabel()
 		self.volumesliderlabel.setText("Vol: "+str(self.mediaplayer.audio_get_volume())+" ")
-		self.volumesliderlabel.setStyleSheet('QLabel {background-color: '+strings.BG_COLOR+'; color: '+strings.TEXT_COLOR+';}')
+		#self.volumesliderlabel.setStyleSheet('QLabel {background-color: '+strings.BG_COLOR+'; color: '+strings.TEXT_COLOR+';}')
 		self.hbuttonbox.addWidget(self.volumesliderlabel)
 		self.hbuttonbox.addWidget(self.volumeslider)
 		
@@ -293,7 +290,7 @@ class VideoPlayerWindow(QMainWindow):
 	
 	def updateUI(self):
 		self.___onChange = False
-		self.positionslider.setValue(self.mediaplayer.get_position() * 1000)
+		self.positionslider.setValue(int(self.mediaplayer.get_position() * 1000))
 		
 		_t = self.mediaplayer.get_time()
 		self.timeLabel.setText(self.msToHMS(_t))
@@ -606,7 +603,7 @@ class VideoPlayerWindow(QMainWindow):
 	def setPosition(self, position):
 		if self.___onChange:
 			self.mediaplayer.set_position(position / 1000.0)
-			if self.audioTracks[self.audioTracksId].is_external:
+			if len(self.audioTracks) > self.audioTracksId and self.audioTracks[self.audioTracksId].is_external:
 				self.externalTrack.set_position(position / 1000.0)
 			self.secondSub.id = 0
 				
@@ -614,7 +611,7 @@ class VideoPlayerWindow(QMainWindow):
 		if self.___onChange:
 			position = self.positionslider.value()
 			self.mediaplayer.set_position(position / 1000.0)
-			if self.audioTracks[self.audioTracksId].is_external:
+			if len(self.audioTracks) > self.audioTracksId and self.audioTracks[self.audioTracksId].is_external:
 				self.externalTrack.set_position(position / 1000.0)
 			self.secondSub.id = 0
 	
@@ -624,7 +621,7 @@ class VideoPlayerWindow(QMainWindow):
 		if _p < 0:
 			_p = 0
 		self.mediaplayer.set_time(_p)
-		if self.audioTracks[self.audioTracksId].is_external:
+		if len(self.audioTracks) > self.audioTracksId and self.audioTracks[self.audioTracksId].is_external:
 			self.externalTrack.set_time(_p)
 		
 	def moveGreaterMs(self):
@@ -633,7 +630,7 @@ class VideoPlayerWindow(QMainWindow):
 		if _p >= self.mediaplayer.get_length():
 			_p = self.mediaplayer.get_length()-10
 		self.mediaplayer.set_time(_p)
-		if self.audioTracks[self.audioTracksId].is_external:
+		if len(self.audioTracks) > self.audioTracksId and self.audioTracks[self.audioTracksId].is_external:
 			self.externalTrack.set_time(_p)
 	
 	def moveLess(self):
@@ -642,7 +639,7 @@ class VideoPlayerWindow(QMainWindow):
 		if _p < 0:
 			_p = 0
 		self.mediaplayer.set_position(_p / 1000.0)
-		if self.audioTracks[self.audioTracksId].is_external:
+		if len(self.audioTracks) > self.audioTracksId and self.audioTracks[self.audioTracksId].is_external:
 			self.externalTrack.set_position(_p / 1000.0)
 		
 	def moveGreater(self):
@@ -651,7 +648,7 @@ class VideoPlayerWindow(QMainWindow):
 		if _p >= 1000:
 			_p = 1000
 		self.mediaplayer.set_position(_p / 1000.0)
-		if self.audioTracks[self.audioTracksId].is_external:
+		if len(self.audioTracks) > self.audioTracksId and self.audioTracks[self.audioTracksId].is_external:
 			self.externalTrack.set_position(_p / 1000.0)
 	
 	def mute(self):
@@ -822,11 +819,11 @@ class VideoPlayerWindow(QMainWindow):
 		
 	def msToHMS(self, millis):
 		millis = int(millis)
-		seconds=(millis/1000)%60
+		seconds=(millis//1000)%60
 		seconds = int(seconds)
-		minutes=(millis/(1000*60))%60
+		minutes=(millis//(1000*60))%60
 		minutes = int(minutes)
-		hours=(millis/(1000*60*60))%24
+		hours=(millis//(1000*60*60))%24
 		hours=int(hours)
 		return (str(hours) if hours > 9 else "0"+str(hours)) +":"+\
 			(str(minutes) if minutes > 9 else "0"+str(minutes))+":"+\
@@ -943,7 +940,7 @@ class VideoPlayerWindow(QMainWindow):
 		_i = self.audioTracksId
 		self.audioTracksId = i
 		
-		if self.audioTracks[self.audioTracksId].is_external:
+		if len(self.audioTracks) > self.audioTracksId and self.audioTracks[self.audioTracksId].is_external:
 			self.mediaplayer.audio_set_mute(True)
 			self.externalMedia = self.instance.media_new(self.audioTracks[self.audioTracksId].path)
 			self.externalTrack.set_media(self.externalMedia)
@@ -1172,7 +1169,7 @@ class VideoPlayerWindow(QMainWindow):
 		if type == "SUBTITLES":
 			self.mediaplayer.video_set_spu_delay(delay)
 		elif type == "AUDIO":
-			if self.audioTracks[self.audioTracksId].is_external:
+			if len(self.audioTracks) > self.audioTracksId and self.audioTracks[self.audioTracksId].is_external:
 				self.externalTrack.audio_set_delay(delay)
 				self.mediaplayer.audio_set_delay(delay)
 			else:
@@ -1323,5 +1320,6 @@ if __name__ == '__main__':
 	player.show()
 	
 	app.installEventFilter(player)
+	apply_stylesheet(app, theme='dark_teal.xml')
 	sys.exit(app.exec_())
 	
