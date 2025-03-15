@@ -1,14 +1,13 @@
 import pysrt
 import strings
-import goslate
+from googletrans import Translator
+import asyncio
 
 class Subtitles:
 	def __init__(self, file=None):
 		self.subs = None
 		self.open(file)
 		self.id = 0
-		#self.translator = Translator()
-		self.translator = goslate.Goslate()
 		self.oldText = ""
 		
 	def open(self, file):
@@ -37,18 +36,23 @@ class Subtitles:
 				i+=1
 		return text
 	
+	async def translateText(self, text):
+		async with Translator() as translator:
+			result = await translator.translate(text,dest=strings.TRANSLATE_DEST)
+			if not result:
+				return ''
+			return result.text
+
+
 	def getTranslateCurSub(self, ms):
 		text = self.getCurSub(ms)
 		if text == self.oldText:
 			return None
 		self.oldText = text
 		try:
-			tr = self.translator.translate(text, strings.TRANSLATE_DEST)
+			tr = asyncio.run(self.translateText(text))
 		except:
 			return ""
-			#.translate(text, 
-			#src=strings.TRANSLATE_SRC, 
-			#dest=strings.TRANSLATE_DEST).text
 		return tr
 		
 	def toMs(self, time):
@@ -63,12 +67,9 @@ class Subtitles:
 			return None
 		self.oldText = text
 		try:
-			tr = self.translator.translate(text, strings.TRANSLATE_DEST)
+			tr = asyncio.run(self.translateText(text))
 		except:
 			return ""
-		#tr = self.translator.translate(text, 
-		#	src=strings.TRANSLATE_SRC, 
-		#	dest=strings.TRANSLATE_DEST).text
 		return tr
 		
 		

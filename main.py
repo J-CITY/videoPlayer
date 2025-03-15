@@ -118,7 +118,6 @@ class VideoPlayerWindow(QMainWindow):
 		#translate
 		######
 		
-		
 		if inList != []:
 			self.openFile(inList)
 		self.updateFlags()
@@ -400,8 +399,9 @@ class VideoPlayerWindow(QMainWindow):
 		elif event.button() == Qt.MidButton:
 			self.playPause()
 			self.offset = None
-		else:
+		elif event.button() == Qt.LeftButton:
 			self.offset = event.pos()
+
 	def mouseMoveEvent(self, event):
 		if event.button() != Qt.RightButton and event.button() != Qt.MidButton  and self.offset != None and not self.isFullScreen:
 			
@@ -554,6 +554,7 @@ class VideoPlayerWindow(QMainWindow):
 			self.mediaplayer.pause()
 			#self.listPlayer.pause()
 			self.playbutton.setText(strings.PLAY_BTN)
+			self.playbutton.setIcon(QIcon('icons/playIcon.svg'))
 			self.isPaused = True
 			if len(self.audioTracks) > 0 and self.audioTracks[self.audioTracksId].is_external:
 				self.externalTrack.pause()
@@ -564,6 +565,7 @@ class VideoPlayerWindow(QMainWindow):
 				self.externalTrack.set_position(self.mediaplayer.get_position())
 			#self.listPlayer.play()
 			self.playbutton.setText(strings.PAUSE_BTN)
+			self.playbutton.setIcon(QIcon('icons/pauseIcon.svg'))
 			#self.timer.start()
 			self.isPaused = False
 		
