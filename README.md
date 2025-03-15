@@ -1,23 +1,19 @@
-# videoPlayer
+# Sparrow video player
 
-deps:
-pyqt5
-pytube
-pysrt
-goslate
-bencodepy
-qt-material
+Video player with the ability to translate subtitles on the fly
 
-Build exe
 
+### Install dependencies
+Use VLC lib. Already in repository.
+```
+pip install pyqt5 pytube pysrt googletrans bencodepy qt-material
+```
+
+### Build exe
+```
 pyinstaller -w -i "./icons/icon.ico" -F main.py
-
+```
 Video player (use VLC lib). Can translate sub.
 
-Dependences:
 
-pip install pyqt5 goslate pysrt python-libtorrent
-
-for torrents need install peerflix and replace index.js and app.js
-
-![Screenshot](https://github.com/J-CITY/videoPlayer/blob/master/scr.png)
+![Screenshot](https://github.com/J-CITY/videoPlayer/blob/master/screens/scr.png)
