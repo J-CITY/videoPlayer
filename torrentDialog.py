@@ -1,18 +1,10 @@
-import os, sys
-
-from PyQt5.QtWidgets import (QWidget, QDialog, QGroupBox, QGridLayout, QListWidget,
-	QLineEdit, QPushButton, QFormLayout, QLabel, QTabWidget, QComboBox)
-
-from PyQt5.QtWidgets import (QTabBar,QStyle,QStylePainter,QStyleOptionTab, QFileDialog, QInputDialog)
-from PyQt5.QtGui import (QPainter,QFont,QPalette)
-from PyQt5.QtCore import (Qt, QSize)
-from widget import QJumpSlider, HorizontalTabWidget, GroupBox
-
+from PyQt5.QtWidgets import (QFileDialog, QInputDialog, QDialog, QGridLayout, QListWidget, QPushButton)
+from widget import GroupBox
 import subprocess
-import asyncio
-import os.path
 import re
-import time
+import bencodepy
+import hashlib
+import base64
 
 class TorrentDialog(QDialog):
 	def __init__(self, p):

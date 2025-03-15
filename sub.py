@@ -1,7 +1,7 @@
 import pysrt
-#from googletrans import Translator
 import strings
 import goslate
+
 class Subtitles:
 	def __init__(self, file=None):
 		self.subs = None

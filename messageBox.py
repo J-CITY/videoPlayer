@@ -1,6 +1,5 @@
-import sys
 from PyQt5 import QtWidgets, QtCore, QtGui
-from PyQt5.QtCore import QDir, Qt, QUrl, QTimer, pyqtSignal, QObject, QEvent
+from PyQt5.QtCore import QTimer
 import strings
 
 class MessageBox(QtWidgets.QDialog):

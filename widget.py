@@ -1,12 +1,6 @@
-from PyQt5.QtCore import QDir, Qt, QUrl, QTimer, pyqtSignal, QObject, QEvent, QSize
-from PyQt5.QtMultimedia import QMediaContent, QMediaPlayer
-from PyQt5.QtMultimediaWidgets import QVideoWidget
-from PyQt5.QtWidgets import (QApplication, QFileDialog, QHBoxLayout, QLabel, 
-		QPushButton, QSizePolicy, QSlider, QStyle, QVBoxLayout, QWidget)
-from PyQt5.QtWidgets import (QMainWindow,QWidget, QPushButton, QAction, QFrame, QMenu, 
-	QInputDialog,QTabBar, QStylePainter, QStyleOptionTab, QSystemTrayIcon, QMenu, QGroupBox)
-from PyQt5.QtGui import QIcon, QPalette, QColor, QFont, QPainter, QCursor, QMouseEvent
-import strings
+from PyQt5.QtCore import Qt, QSize
+from PyQt5.QtWidgets import (QSlider, QStyle, QFrame, QTabBar, QStylePainter, QStyleOptionTab, QSystemTrayIcon, QGroupBox)
+
 class QJumpSlider(QSlider):
 	def __init__(self, orient, parent = None):
 		super(QJumpSlider, self).__init__(orient, parent)

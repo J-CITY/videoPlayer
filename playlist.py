@@ -1,14 +1,6 @@
-import os, sys
-
-from PyQt5.QtWidgets import (QWidget, QDialog, QGroupBox, QGridLayout, QListWidget,
-	QLineEdit, QPushButton, QFormLayout, QLabel, QTabWidget, QComboBox)
-
-from PyQt5.QtWidgets import (QTabBar,QStyle,QStylePainter,QStyleOptionTab, QFileDialog)
-from PyQt5.QtGui import (QPainter,QFont,QPalette)
-from PyQt5.QtCore import (Qt, QSize)
-from widget import QJumpSlider, HorizontalTabWidget, GroupBox
-import math
-
+import os
+from PyQt5.QtWidgets import (QDialog, QGridLayout, QListWidget, QPushButton, QFileDialog)
+from widget import GroupBox
 
 class PlaylistDialog(QDialog):
 	def __init__(self, p, pl):

@@ -1,12 +1,6 @@
-import os, sys
-
-from PyQt5.QtWidgets import (QWidget, QDialog, QGroupBox, QGridLayout,
-	QLineEdit, QPushButton, QFormLayout, QLabel, QTabWidget, QComboBox)
-
-from PyQt5.QtWidgets import (QTabBar,QStyle,QStylePainter,QStyleOptionTab)
-from PyQt5.QtGui import (QPainter,QFont,QPalette)
-from PyQt5.QtCore import (Qt, QSize)
-from widget import QJumpSlider, HorizontalTabWidget
+from PyQt5.QtWidgets import (QDialog, QGroupBox, QGridLayout,  QLabel, QComboBox)
+from PyQt5.QtCore import (Qt)
+from widget import QJumpSlider
 import math
 
 class EqualizerDialog(QDialog):

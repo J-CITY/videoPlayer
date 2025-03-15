@@ -1,18 +1,25 @@
-from PyQt5.QtCore import QDir, Qt, QUrl, QTimer, pyqtSignal, QObject, QEvent
-from PyQt5.QtMultimedia import QMediaContent, QMediaPlayer
-from PyQt5.QtMultimediaWidgets import QVideoWidget
+try:
+	import PyQt5
+	import pytube
+	import pysrt
+	import goslate
+	import bencodepy
+except:
+	print("Some important lids are not installed (pyqt5/pytube/pysrt/goslate/bencodepy)")
+	exit(1)
+
+from PyQt5.QtCore import Qt, QTimer, QEvent
 from PyQt5.QtWidgets import (QApplication, QFileDialog, QHBoxLayout, QLabel,
-		QPushButton, QSizePolicy, QSlider, QStyle, QVBoxLayout, QWidget)
-from PyQt5.QtWidgets import (QMainWindow,QWidget, QPushButton, QAction, 
-	QFrame, QMenu, QInputDialog, QTextEdit)
-from PyQt5.QtGui import QIcon, QPalette, QColor, QFont, QPainter, QCursor, QMouseEvent, QIcon
+		QPushButton, QVBoxLayout, QWidget, QMainWindow,QWidget, QPushButton, 
+		QAction, QMenu, QInputDialog, QTextEdit)
+from PyQt5.QtGui import QIcon, QPalette, QColor, QFont, QCursor, QIcon
 import sys, os
 import vlc
 import time
 import datetime
 import ctypes
 from pytube import YouTube
-from widget import QJumpSlider, HorizontalTabWidget, CustomSystemTrayIcon, Frame
+from widget import QJumpSlider, CustomSystemTrayIcon, Frame
 from equalizer import EqualizerDialog
 from playlist import PlaylistDialog
 from torrentDialog import TorrentDialog
@@ -22,11 +29,9 @@ import threading
 from messageBox import MessageBox
 import re
 from sub import Subtitles
-
 import subprocess
 import asyncio
 import os.path
-
 
 class Track:
 	codec = ""
@@ -43,7 +48,6 @@ class VideoPlayerWindow(QMainWindow):
 
 	def __init__(self, inList, parent=None):
 		super(VideoPlayerWindow, self).__init__(parent)
-		#self.setWindowFlags(Qt.FramelessWindowHint)
 		self.setWindowTitle(strings.VIDEOPLAYER_NAME) 
 		
 		self.torrentProc = None
@@ -416,9 +420,7 @@ class VideoPlayerWindow(QMainWindow):
 			event.ignore()
 
 	def dropEvent(self, event):
-		files = [unicode(u.toLocalFile()) for u in event.mimeData().urls()]
-		#for f in files:
-		#	print(f)
+		pass
 	
 	def wheelEvent(self, event):
 		p = event.angleDelta()
@@ -467,7 +469,7 @@ class VideoPlayerWindow(QMainWindow):
 	def setTray(self):
 		if self.menu == None:
 			return
-		self.systemtray = CustomSystemTrayIcon(QIcon('bell.png'), self.contextMenu(True), self)
+		self.systemtray = CustomSystemTrayIcon(QIcon('iconst/bell.png'), self.contextMenu(True), self)
 		self.systemtray.activated.connect(self.showTrayEvent)
 		self.systemtray.show()
 		
@@ -693,11 +695,13 @@ class VideoPlayerWindow(QMainWindow):
 			self.videoframe.unsetCursor()
 	
 	def takeScreenshot(self):
+		import pathlib
 		path = os.path.dirname(os.path.abspath(__file__))
 		now = datetime.datetime.now()
 		filename = now.strftime("%Y-%m-%d-%H-%M-%S-")+str(now.microsecond)+".png"
 		wh = self.mediaplayer.video_get_size()
-		self.mediaplayer.video_take_snapshot(0, path+"\\screenshots\\"+filename, wh[0], wh[1])
+		pathlib.Path(path+"/screenshots").mkdir(parents=False, exist_ok=True) 
+		self.mediaplayer.video_take_snapshot(0, path+"/screenshots/"+filename, wh[0], wh[1])
 	
 	def setNextRatio(self):
 		self.ratioId = 0 if self.ratioId+1 >= len(self.ratios) else self.ratioId+1
@@ -726,9 +730,6 @@ class VideoPlayerWindow(QMainWindow):
 		if filenames is None or filenames == []:
 			return
 		# create the media
-		if sys.version < '3':
-			for f in filenames:
-				f = unicode(f)
 		self.playlistList = filenames
 		self.playlistListId = 0
 		self.openPlayer(filenames[0])

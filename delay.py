@@ -1,14 +1,5 @@
-import os, sys
-
-from PyQt5.QtWidgets import (QWidget, QDialog, QGroupBox, QGridLayout, QListWidget,
-	QLineEdit, QPushButton, QFormLayout, QLabel, QTabWidget, QComboBox)
-
+from PyQt5.QtWidgets import (QDialog, QGridLayout, QPushButton)
 from PyQt5.QtWidgets import (QDoubleSpinBox)
-from PyQt5.QtGui import (QPainter,QFont,QPalette)
-from PyQt5.QtCore import (Qt, QSize)
-from widget import QJumpSlider, HorizontalTabWidget, GroupBox
-import math
-
 
 class DelayDialog(QDialog):
 	def __init__(self, p, delay, type):

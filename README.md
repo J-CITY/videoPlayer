@@ -1,5 +1,16 @@
 # videoPlayer
 
+deps:
+pyqt5
+pytube
+pysrt
+goslate
+bencodepy
+
+Build exe
+
+pyinstaller -w -i "./icons/icon.ico" -F main.py
+
 Video player (use VLC lib). Can translate sub.
 
 Dependences:
