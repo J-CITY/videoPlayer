@@ -2,11 +2,11 @@ CONFIG_USE_NOTIFICATION = True
 
 VIDEOPLAYER_NAME = "Sparrow"
 
-PLAY_BTN = "⏵"
-PAUSE_BTN = "⏸"
-NEXT_BTN = "⏩︎"
-PREV_BTN = "⏪︎"
-STOP_BTN = "⏹"
+PLAY_BTN = ""#"⏵"
+PAUSE_BTN = ""#"⏸"
+NEXT_BTN = ""#"⏩︎"
+PREV_BTN = ""#"⏪︎"
+STOP_BTN = ""#"⏹"
 
 HELP = """
 Sparrow video player
