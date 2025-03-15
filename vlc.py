@@ -148,6 +148,8 @@ def find_lib():
                 os.chdir(p)
             else:  # may fail
                 dll = ctypes.CDLL('libvlc.dll')
+        elif os.path.exists('./libvlc.dll'):
+            dll = ctypes.CDLL('./libvlc.dll')
         else:
             plugin_path = os.path.dirname(p)
             dll = ctypes.CDLL(p)
@@ -163,7 +165,6 @@ def find_lib():
                 plugin_path = d
         else:  # hope, some PATH is set...
             dll = ctypes.CDLL('libvlc.dylib')
-
     else:
         raise NotImplementedError('%s: %s not supported' % (sys.argv[0], sys.platform))
 
