@@ -162,19 +162,19 @@ class EqualizerDialog(QDialog):
 	def setPositionEq(self, id):
 		#print(id)
 		self.eqSliders[id].setValue(self.eqSliders[id].value())
-		self.eqLables[id].setText(str(self.eqSliders[id].value() / 100)+" dB")
-		self.presenter.setEqualizer(id, self.eqSliders[id].value() / 100)
+		self.eqLables[id].setText(str(self.eqSliders[id].value() // 100)+" dB")
+		self.presenter.setEqualizer(id, self.eqSliders[id].value() // 100)
 		
 	def setPositionPreamp(self, id):
 		#print(id)
 		self.eqSliders[id].setValue(self.eqSliders[id].value())
-		self.eqLables[id].setText(str(self.eqSliders[id].value() / 100)+" dB")
-		self.presenter.setEqualizerPreamp(self.eqSliders[id].value() / 100)
+		self.eqLables[id].setText(str(self.eqSliders[id].value() // 100)+" dB")
+		self.presenter.setEqualizerPreamp(self.eqSliders[id].value() // 100)
 		
 	def setPositionRate(self, id):
 		#print(id)
 		self.eqSliders[id].setValue(self.eqSliders[id].value())
-		self.eqLables[id].setText(str(self.eqSliders[id].value() / 100))
-		self.presenter.setRate(self.eqSliders[id].value() / 100)
+		self.eqLables[id].setText(str(self.eqSliders[id].value() // 100))
+		self.presenter.setRate(self.eqSliders[id].value() // 100)
 		
 		

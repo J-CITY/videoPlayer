@@ -52,6 +52,6 @@ class MessageBox(QtWidgets.QDialog):
 			self.text = self.text[:len(self.text)-1]
 			pixelsWide = fm.width(self.text)
 		
-		qp.drawText(int(popup_width/2) - pixelsWide/2, int(popup_height/2)+5, self.text)
+		qp.drawText(int(popup_width/2) - int(pixelsWide/2), int(popup_height/2)+5, self.text)
 		qp.end()
 		
