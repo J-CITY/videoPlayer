@@ -25,6 +25,15 @@ npm install -g peerflix
 ```
 
 ### Build exe
+
+#### Install `pyinstaller`
+
+```
+pip install pyinstaller
+```
+
+#### Build .exe
+
 ```
 pyinstaller -w -i "./icons/icon.ico" -F main.py
 ```
