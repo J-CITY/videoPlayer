@@ -108,7 +108,7 @@ class EqualizerDialog(QDialog):
 		if math.isnan(_eq["preamp"]):
 			slider.setValue(0)
 		else:
-			slider.setValue(_eq["preamp"]*100)
+			slider.setValue(int(_eq["preamp"])*100)
 		self.eqSliders.append(slider)
 		slider.valueChanged.connect(lambda state, id = 0 : self.setPositionPreamp(id))
 		lable = QLabel("Preamp")
@@ -128,7 +128,7 @@ class EqualizerDialog(QDialog):
 			if math.isnan(_eq["bands"][band]):
 				slider.setValue(0)
 			else:
-				slider.setValue(_eq["bands"][band]*100)
+				slider.setValue(int(_eq["bands"][band])*100)
 			self.eqSliders.append(slider)
 			slider.valueChanged.connect(lambda state, id = i+1 : self.setPositionEq(id))
 			lable = QLabel(str(band) + " Gz")

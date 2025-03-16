@@ -1,6 +1,6 @@
 try:
 	import PyQt5
-	import pytube
+	import pytubefix
 	import pysrt
 	import goslate
 	import bencodepy
@@ -9,17 +9,19 @@ except:
 	print("Some important lids are not installed (pyqt5/pytube/pysrt/goslate/bencodepy/qt_material)")
 	exit(1)
 
+# if you want disabled subtitles gen set it in False
+_SUB_GEN_SUPPORT = True
+
 from PyQt5.QtCore import Qt, QTimer, QEvent
 from PyQt5.QtWidgets import (QApplication, QFileDialog, QHBoxLayout, QLabel,
 		QPushButton, QVBoxLayout, QWidget, QMainWindow,QWidget, QPushButton, 
 		QAction, QMenu, QInputDialog, QTextEdit)
 from PyQt5.QtGui import QIcon, QPalette, QColor, QFont, QCursor, QIcon
-import sys, os
+import sys, os, math
 import vlc
 import time
 import datetime
 import ctypes
-from pytube import YouTube
 from widget import QJumpSlider, CustomSystemTrayIcon, Frame
 from equalizer import EqualizerDialog
 from playlist import PlaylistDialog
@@ -55,6 +57,8 @@ class VideoPlayerWindow(QMainWindow):
 
 		self.___onChange = True
 		
+		self.ffmpegTracksInfo = []
+		self.fname = None
 		# creating a basic vlc instance
 		self.instance = vlc.Instance()
 		# creating an empty vlc media player
@@ -117,7 +121,7 @@ class VideoPlayerWindow(QMainWindow):
 		self.secondSub = Subtitles()
 		#translate
 		######
-		
+
 		if inList != []:
 			self.openFile(inList)
 		self.updateFlags()
@@ -291,6 +295,8 @@ class VideoPlayerWindow(QMainWindow):
 		thread.start()
 	
 	def updateUI(self):
+		if self.mediaplayer.has_vout() <= 0:
+			return
 		self.___onChange = False
 		self.positionslider.setValue(int(self.mediaplayer.get_position() * 1000))
 		
@@ -300,7 +306,7 @@ class VideoPlayerWindow(QMainWindow):
 		self.lengthLabel.setText("/ "+self.msToHMS(_t))
 		
 		v = self.mediaplayer.audio_get_volume()
-		self.volumesliderlabel.setText("Vol: "+str(v)+" ")
+		self.volumesliderlabel.setText("Vol: "+ '' if v < 0 else str(v)+" ")
 		
 		self.___onChange = True
 		if not self.mediaplayer.is_playing():
@@ -587,6 +593,7 @@ class VideoPlayerWindow(QMainWindow):
 			self.openPlayer(self.playlistList[self.playlistListId])
 		if len(self.audioTracks) > 0 and self.audioTracks[self.audioTracksId].is_external:
 			self.externalTrack.stop()
+
 	def prev(self):
 		_id = self.playlistListId
 		self.playlistListId -= 1
@@ -795,7 +802,109 @@ class VideoPlayerWindow(QMainWindow):
 					self.playlistList = []
 					self.openFile([fullPath])
 					return
-	
+
+	#TODO: move to utils
+	def extractAudio(self, fname, track):
+		global _SUB_GEN_SUPPORT
+		if _SUB_GEN_SUPPORT:
+			try:
+				import ffmpeg
+				_SUB_GEN_SUPPORT = True
+			except:
+				_SUB_GEN_SUPPORT = False
+		if not _SUB_GEN_SUPPORT:
+			return None
+		extracted_audio = f"audio_{fname}.wav"
+		stream = ffmpeg.input(fname)
+		stream = ffmpeg.output(stream, extracted_audio, map = '0:' + str(track[0]))
+		ffmpeg.run(stream, overwrite_output=True)
+		return extracted_audio
+	def formatTime(self, seconds):
+		hours = math.floor(seconds / 3600)
+		seconds %= 3600
+		minutes = math.floor(seconds / 60)
+		seconds %= 60
+		milliseconds = round((seconds - math.floor(seconds)) * 1000)
+		seconds = math.floor(seconds)
+		formatted_time = f"{hours:02d}:{minutes:02d}:{seconds:01d},{milliseconds:03d}"
+		return formatted_time
+	def transcribe(self, audio, fname):
+		global _SUB_GEN_SUPPORT
+		if _SUB_GEN_SUPPORT:
+			try:
+				from faster_whisper import WhisperModel
+				_SUB_GEN_SUPPORT = True
+			except:
+				_SUB_GEN_SUPPORT = False
+		if not _SUB_GEN_SUPPORT:
+			return
+		model = WhisperModel("small")
+		segments, info = model.transcribe(audio)
+		language = info.language
+		print("Transcription language", language)
+		subtitle_file = f"sub_{fname}.{language}.srt"
+		text = ""
+		index = 0
+		for segment in segments:
+			#print("[%.2fs -> %.2fs] %s" % (segment.start, segment.end, segment.text))
+			segment_start = self.formatTime(segment.start)
+			segment_end = self.formatTime(segment.end)
+			text += f"{str(index+1)} \n"
+			text += f"{segment_start} --> {segment_end} \n"
+			text += f"{segment.text} \n"
+			text += "\n"
+			index += 1
+		f = open(subtitle_file, "w")
+		f.write(text)
+		f.close()
+		return language, []
+
+	def genSubtitlesFromVideoTrackThread(self, fname, track):
+		audio = self.extractAudio(fname, track)
+		if not audio:
+			return
+		self.transcribe(audio, fname)
+		print("Suftitles for:", audio, "is ready")
+	def genSubtitlesFromVideoTrack(self, fname, track):
+		if not fname:
+			return
+		thread = threading.Thread(target=self.genSubtitlesFromVideoTrackThread, args=(fname, track,))
+		thread.daemon = True
+		thread.start()
+
+	def genSubtitlesFromAudioTrack(self, audio, fname):
+		self.transcribe(audio, fname)
+		print("Suftitles for:", audio, "is ready")
+
+	def openAudioFileForGenSubAct(self):
+		path = os.path.dirname(os.path.abspath(__file__))
+		filter = "Audio (*.wav *.mp3 *.flac *.ac3)"
+		fname = QFileDialog.getOpenFileName(self, 'Open file', path, filter)[0]
+		if fname == "":
+			return
+		thread = threading.Thread(target=self.genSubtitlesFromAudioTrack, args=(fname, fname))
+		thread.daemon = True
+		thread.start()
+
+	def addTracksInfoFFMPEG(self, fname):
+		global _SUB_GEN_SUPPORT
+		if _SUB_GEN_SUPPORT:
+			try:
+				import ffmpeg
+				_SUB_GEN_SUPPORT = True
+			except:
+				_SUB_GEN_SUPPORT = False
+		if not _SUB_GEN_SUPPORT:
+			return
+		if fname.startswith('file:///'):
+			fname = fname[8:]
+		self.ffmpegTracksInfo = []
+		probe = ffmpeg.probe(fname)
+		for stream in probe['streams']:
+			if stream['codec_type'] == 'audio':
+				self.ffmpegTracksInfo.append((stream['index'], stream['tags']['title']))
+		self.fname = fname
+
 	def openPlayer(self, fname):
 		self.media = self.instance.media_new(fname)
 		
@@ -819,9 +928,10 @@ class VideoPlayerWindow(QMainWindow):
 				pathList = fname.split("\\")
 			_fn = pathList[len(pathList)-1]
 			self.message.setText("Play: "+_fn)
-		
+		if _SUB_GEN_SUPPORT:
+			self.addTracksInfoFFMPEG(fname)
 		self.systemtray.updateMenu(self.contextMenu())
-		
+
 	def msToHMS(self, millis):
 		millis = int(millis)
 		seconds=(millis//1000)%60
@@ -905,11 +1015,13 @@ class VideoPlayerWindow(QMainWindow):
 					if w.widget() != None:
 						w.widget().setHidden(False)
 				self.secondSub.open(self.subTracks[self.subTracksId].path)
+				self.translateSubAct.setText('Translate [On]')
 			else:
 				items = (self.subbox.itemAt(i) for i in range(self.subbox.count()))
 				for w in items:
 					if w.widget() != None:
 						w.widget().setHidden(True)
+				self.translateSubAct.setText('Translate [Off]')
 			
 	def translateDynamicSub(self):
 		if self.subTracksId < 0 or self.subTracksId >= len(self.subTracks):
@@ -923,11 +1035,13 @@ class VideoPlayerWindow(QMainWindow):
 					if w.widget() != None:
 						w.widget().setHidden(False)
 				self.secondSub.open(self.subTracks[self.subTracksId].path)
+				self.translateDynamicSubAct.setText('Dynamic Translate [On]')
 			else:
 				items = (self.dsubbox.itemAt(i) for i in range(self.dsubbox.count()))
 				for w in items:
 					if w.widget() != None:
 						w.widget().setHidden(True)
+				self.translateDynamicSubAct.setText('Dynamic Translate [Off]')
 			
 	def offSub(self):
 		self.subTracksId = -1
@@ -986,29 +1100,31 @@ class VideoPlayerWindow(QMainWindow):
 			self.menu.addAction(controlAct)
 			self.menu.addSeparator()
 		
+		subActionPlayerControl = QMenu('Control', self)
+
 		controlAct = QAction('Play/Pause', self)
 		controlAct.triggered.connect(self.playPause)
-		self.menu.addAction(controlAct)
+		subActionPlayerControl.addAction(controlAct)
 		
 		controlAct = QAction('Stop', self)
 		controlAct.triggered.connect(self.stop)
-		self.menu.addAction(controlAct)
+		subActionPlayerControl.addAction(controlAct)
 		
 		controlAct = QAction('Next', self)
 		controlAct.triggered.connect(self.next)
-		self.menu.addAction(controlAct)
+		subActionPlayerControl.addAction(controlAct)
 		
 		controlAct = QAction('Prev', self)
 		controlAct.triggered.connect(self.prev)
-		self.menu.addAction(controlAct)
+		subActionPlayerControl.addAction(controlAct)
 		
 		controlAct = QAction('Move ->', self)
 		controlAct.triggered.connect(self.moveGreater)
-		self.menu.addAction(controlAct)
+		subActionPlayerControl.addAction(controlAct)
 		
 		controlAct = QAction('Move <-', self)
 		controlAct.triggered.connect(self.moveLess)
-		self.menu.addAction(controlAct)
+		subActionPlayerControl.addAction(controlAct)
 		self.menu.addSeparator()
 		
 		subAction = QMenu('Subtitles 1', self)
@@ -1018,14 +1134,14 @@ class VideoPlayerWindow(QMainWindow):
 		subAction.addAction(externalSubAct)
 		subAction.addSeparator()
 		
-		translateSubAct = QAction('Translate', self.menu)
-		translateSubAct.triggered.connect(self.translateSub)
-		subAction.addAction(translateSubAct)
+		self.translateSubAct = QAction('Translate [Off]', self.menu)
+		self.translateSubAct.triggered.connect(self.translateSub)
+		subAction.addAction(self.translateSubAct)
 		subAction.addSeparator()
 		
-		translateSubAct = QAction('Dynamic Translate', self.menu)
-		translateSubAct.triggered.connect(self.translateDynamicSub)
-		subAction.addAction(translateSubAct)
+		self.translateDynamicSubAct = QAction('Dynamic Translate [Off]', self.menu)
+		self.translateDynamicSubAct.triggered.connect(self.translateDynamicSub)
+		subAction.addAction(self.translateDynamicSubAct)
 		subAction.addSeparator()
 		
 		for i, s in enumerate(self.subTracks):
@@ -1072,7 +1188,18 @@ class VideoPlayerWindow(QMainWindow):
 		offAudioAct.triggered.connect(self.offAudio)
 		audioAction.addAction(offAudioAct)
 		audioAction.addSeparator()
-		
+
+		if _SUB_GEN_SUPPORT:
+			self.subGenAction = QMenu('Gen subtitles', self)
+			for track in self.ffmpegTracksInfo:
+				print(track[1])
+				act = QAction(track[1], self)
+				act.triggered.connect(lambda: self.genSubtitlesFromVideoTrack(self.fname, track))
+				self.subGenAction.addAction(act)
+			act = QAction("From audio", self)
+			act.triggered.connect(lambda: self.openAudioFileForGenSubAct())
+			self.subGenAction.addAction(act)
+
 		audioAction.addSeparator()
 		delayAudioAct = QAction("delay", self)
 		delay = self.mediaplayer.audio_get_delay()
@@ -1155,8 +1282,11 @@ class VideoPlayerWindow(QMainWindow):
 		closeAct = QAction('Close', self)
 		closeAct.triggered.connect(lambda: (self.systemtray.hide(), self.close()))
 		
+		self.menu.addMenu(subActionPlayerControl)
 		self.menu.addMenu(subAction)
 		self.menu.addMenu(subAction2)
+		if _SUB_GEN_SUPPORT:
+			self.menu.addMenu(self.subGenAction)
 		self.menu.addMenu(audioAction)
 		self.menu.addMenu(videoAction)
 		self.menu.addMenu(sourceAction)
@@ -1192,7 +1322,7 @@ class VideoPlayerWindow(QMainWindow):
 		newT.type = vlc.TrackType.text
 		newT.level = None
 		newT.language = None
-		newT.description = "Externel sub"
+		newT.description = "External sub"
 		newT.is_external = True
 		newT.path = fname
 		self.subTracks.append(newT)
@@ -1210,7 +1340,7 @@ class VideoPlayerWindow(QMainWindow):
 		newT.type = vlc.TrackType.audio
 		newT.level = None
 		newT.language = None
-		newT.description = "Externel audio"
+		newT.description = "External audio"
 		newT.is_external = True
 		newT.path = fname
 		self.audioTracks.append(newT)
@@ -1253,22 +1383,21 @@ class VideoPlayerWindow(QMainWindow):
 		#self.listWidget.addItems(fnames[0])
 
 	def openUrlAct(self):
-		text, ok = QInputDialog.getText(self, 'Input Dialog',
-			'Enter URL:')
+		text, ok = QInputDialog.getText(self, 'Input Dialog', 'Enter URL:')
 		if ok and str(text) != "":
 			url = str(text)
-			#if "youtu" in url:
+			print("Try open:", url)
+			if "youtu" in url:
+				try:
+					_url = pytubefix.YouTube(url).streams.get_highest_resolution().url
+					print(_url)
+					self.playlistList = []
+					self.openFile([_url])
+					return
+				except:
+					print("Not YT")
 			try:
-				_url = YouTube(url).streams.first().url
-				print(_url)
-				self.playlistList = []
-				self.openFile([_url])
-				return
-			except:
-				print("Not YT")
-			
-			try:
-				if (url.find('http') != -1):
+				if url.startswith('http'):
 					self.playlistList = []
 					self.openFile([url])
 				return
