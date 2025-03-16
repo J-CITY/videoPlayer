@@ -1,1 +1,3 @@
 *.pyc
+build/main/base_library.zip
+build/main/main.exe.manifest
