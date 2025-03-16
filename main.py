@@ -430,11 +430,17 @@ class VideoPlayerWindow(QMainWindow):
 	
 	def wheelEvent(self, event):
 		p = event.angleDelta()
-		if p.y() < 0:
-			self.volumeDown()
-		elif p.y() > 0:
-			self.volumeUp()
-			
+		if event.x() < self.geometry().width() // 2:
+			if p.y() < 0:
+				self.volumeDown()
+			elif p.y() > 0:
+				self.volumeUp()
+		else:
+			if p.y() < 0:
+				self.moveLess()
+			elif p.y() > 0:
+				self.moveGreater()
+
 	def hideEvent(self, event):
 		self.hide()
 		#self.messageTray(strings.VIDEOPLAYER_NAME, "Hide application")
