@@ -8,6 +8,8 @@ NEXT_BTN = ""#"⏩︎"
 PREV_BTN = ""#"⏪︎"
 STOP_BTN = ""#"⏹"
 
+SAVE_PATH = "./"
+
 HELP = """
 Sparrow video player
 (Use VLSlib)

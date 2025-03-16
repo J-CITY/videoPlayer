@@ -89,13 +89,12 @@ class TorrentDialog(QDialog):
 				stderr=subprocess.STDOUT, shell=True)
 		stdout, stderr = out.communicate()
 		listOfTorrentFiles = stdout.decode("utf-8") .split('\n')
-		#print(listOfTorrentFiles)
 		listOfTorrentFiles = self.filterFiles(listOfTorrentFiles)
 		for f in listOfTorrentFiles:
 			print(f)
 		print('Err: ', stderr)
 		return listOfTorrentFiles
-	
+
 	def filterFiles(self, files):
 		def isMedia(file_):
 			e = [".webm", ".mkv", ".flv", ".vob", ".ogv,", ".ogg",
@@ -105,7 +104,7 @@ class TorrentDialog(QDialog):
 				".mpeg,", ".mpe,", ".mpv", ".mpg,", ".mpeg,", ".m2v", ".m4v",
 				".svi", ".3gp", ".3g2", ".mxf", ".roq", ".nsv", ".flv",
 				".f4v", ".f4p", ".f4a", ".f4b"]
-			return any([file_.endswith(ext) for ext in e])
+			return any([ext in file_ for ext in e])
 		filesres = []
 		for file_ in files:
 			if isMedia(file_):
