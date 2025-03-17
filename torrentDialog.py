@@ -122,7 +122,3 @@ class TorrentDialog(QDialog):
 			+ '&dn=' + metadata[b'info'][b'name'].decode()\
 			+ '&tr=' + metadata[b'announce'].decode()\
 			+ '&xl=' + str(metadata[b'info'][b'length'])
-
-
-
-	
