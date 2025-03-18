@@ -17,7 +17,7 @@ from PyQt5.QtWidgets import (QApplication, QFileDialog, QHBoxLayout, QLabel,
 		QPushButton, QVBoxLayout, QWidget, QMainWindow,QWidget, QPushButton, 
 		QAction, QMenu, QInputDialog, QTextEdit)
 from PyQt5.QtGui import QIcon, QPalette, QColor, QFont, QCursor, QIcon
-import sys, os, math
+import sys, os
 import vlc
 import time
 import datetime
@@ -36,6 +36,9 @@ import subprocess
 import asyncio
 import os.path
 
+USE_GEN_SUB = True
+from genSubs import *
+
 class Track:
 	codec = ""
 	id = ""
@@ -52,7 +55,8 @@ class VideoPlayerWindow(QMainWindow):
 	def __init__(self, inList, parent=None):
 		super(VideoPlayerWindow, self).__init__(parent)
 		self.setWindowTitle(strings.VIDEOPLAYER_NAME) 
-		
+		self.setWindowIcon(QIcon('icons/bell.png'))
+
 		self.torrentProc = None
 
 		self.___onChange = True
@@ -481,7 +485,7 @@ class VideoPlayerWindow(QMainWindow):
 	def setTray(self):
 		if self.menu == None:
 			return
-		self.systemtray = CustomSystemTrayIcon(QIcon('iconst/bell.png'), self.contextMenu(True), self)
+		self.systemtray = CustomSystemTrayIcon(QIcon('icons/bell.png'), self.contextMenu(True), self)
 		self.systemtray.activated.connect(self.showTrayEvent)
 		self.systemtray.show()
 		
@@ -809,68 +813,18 @@ class VideoPlayerWindow(QMainWindow):
 					self.openFile([fullPath])
 					return
 
-	#TODO: move to utils
-	def extractAudio(self, fname, track):
-		global _SUB_GEN_SUPPORT
-		if _SUB_GEN_SUPPORT:
-			try:
-				import ffmpeg
-				_SUB_GEN_SUPPORT = True
-			except:
-				_SUB_GEN_SUPPORT = False
-		if not _SUB_GEN_SUPPORT:
-			return None
-		extracted_audio = f"audio_{fname}.wav"
-		stream = ffmpeg.input(fname)
-		stream = ffmpeg.output(stream, extracted_audio, map = '0:' + str(track[0]))
-		ffmpeg.run(stream, overwrite_output=True)
-		return extracted_audio
-	def formatTime(self, seconds):
-		hours = math.floor(seconds / 3600)
-		seconds %= 3600
-		minutes = math.floor(seconds / 60)
-		seconds %= 60
-		milliseconds = round((seconds - math.floor(seconds)) * 1000)
-		seconds = math.floor(seconds)
-		formatted_time = f"{hours:02d}:{minutes:02d}:{seconds:01d},{milliseconds:03d}"
-		return formatted_time
-	def transcribe(self, audio, fname):
-		global _SUB_GEN_SUPPORT
-		if _SUB_GEN_SUPPORT:
-			try:
-				from faster_whisper import WhisperModel
-				_SUB_GEN_SUPPORT = True
-			except:
-				_SUB_GEN_SUPPORT = False
-		if not _SUB_GEN_SUPPORT:
-			return
-		model = WhisperModel("small")
-		segments, info = model.transcribe(audio)
-		language = info.language
-		print("Transcription language", language)
-		subtitle_file = f"sub_{fname}.{language}.srt"
-		text = ""
-		index = 0
-		for segment in segments:
-			#print("[%.2fs -> %.2fs] %s" % (segment.start, segment.end, segment.text))
-			segment_start = self.formatTime(segment.start)
-			segment_end = self.formatTime(segment.end)
-			text += f"{str(index+1)} \n"
-			text += f"{segment_start} --> {segment_end} \n"
-			text += f"{segment.text} \n"
-			text += "\n"
-			index += 1
-		f = open(subtitle_file, "w")
-		f.write(text)
-		f.close()
-		return language, []
-
 	def genSubtitlesFromVideoTrackThread(self, fname, track):
-		audio = self.extractAudio(fname, track)
-		if not audio:
+		if not USE_GEN_SUB:
 			return
-		self.transcribe(audio, fname)
-		print("Suftitles for:", audio, "is ready")
+		try:
+			audio = extractAudio(fname, track)
+			if not audio:
+				return
+			transcribe(audio, fname)
+			print("Suftitles for:", audio, "is ready")
+		except:
+			pass
+	
 	def genSubtitlesFromVideoTrack(self, fname, track):
 		if not fname:
 			return
@@ -879,8 +833,13 @@ class VideoPlayerWindow(QMainWindow):
 		thread.start()
 
 	def genSubtitlesFromAudioTrack(self, audio, fname):
-		self.transcribe(audio, fname)
-		print("Suftitles for:", audio, "is ready")
+		if not USE_GEN_SUB:
+			return
+		try:
+			transcribe(audio, fname)
+			print("Suftitles for:", audio, "is ready")
+		except:
+			pass
 
 	def openAudioFileForGenSubAct(self):
 		path = os.path.dirname(os.path.abspath(__file__))
