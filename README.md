@@ -35,6 +35,6 @@ pip install pyinstaller
 #### Build .exe
 
 ```
-pyinstaller -w -i "./icons/icon.ico" -F main.py
+pyinstaller main.spec
 ```
 
